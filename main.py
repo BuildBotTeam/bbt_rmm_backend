@@ -63,7 +63,7 @@ async def check_authentication(request: Request, call_next):
 
 @secure_app.get('/')
 async def index():
-    return 'Hello world!'
+    return get_oid_data()
 
 
 @auth_app.post('/check_token/')
@@ -133,6 +133,7 @@ def get_oid_data():
         for var_bind in var_binds:
             oid, data = [x.prettyPrint() for x in var_bind]
             print(' = '.join([OIDS[oid], data]))
+            return ' = '.join([OIDS[oid], data])
 
 # api = connect('admin', 'admin')
 # list = api.get_resource('/system/script')
