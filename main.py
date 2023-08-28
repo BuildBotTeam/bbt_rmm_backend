@@ -1,4 +1,4 @@
-import asyncio
+import os
 import routeros_api
 from routeros_api.api import RouterOsApi
 from pysnmp.hlapi.asyncio import *
@@ -12,9 +12,17 @@ from pymongo import MongoClient
 
 from models.auth import LoginRequest, Token, Account
 
-# client = MongoClient("mongodb://mongo:27017/")
-# mydb = client["db"]
+login_db = os.getenv('MONGO_INITDB_ROOT_USERNAME', 'admin')
+pass_db = os.getenv('MONGO_INITDB_ROOT_PASSWORD', 'admin')
+name_db = os.getenv('MONGO_INITDB_DATABASE', 'db')
 
+client = MongoClient(f"mongodb://{login_db}:{pass_db}@mongo:27017/db")
+db = client['db']
+
+users = db.get_collection('users')
+print(users.index_information())
+for user in users.find():
+    print(user)
 online_user = []
 
 middleware = Middleware(CORSMiddleware,
@@ -28,8 +36,6 @@ auth_app = FastAPI()
 secure_app = FastAPI()
 app.mount('/auth', auth_app)
 app.mount('/api', secure_app)
-
-# print(client.list_database_names())
 
 IP_MIKROTIK = '192.168.252.134'
 OIDS = {
@@ -87,7 +93,6 @@ async def logout(request, token: Token):
 
 @auth_app.post('/login/')
 async def login(auth: LoginRequest):
-
     acc = Account(username=auth.username, hash_password=get_password_hash(auth.password),
                   token=b64encode(token_bytes(32)).decode(), active=True)
     online_user.append(acc)

@@ -15,19 +15,28 @@ services:
       - app-net
     ports:
       - 4000:4000
+    env_file:
+      - ./.env.dev
     depends_on:
       - mongo
     restart: unless-stopped
   
   mongo:
     image: mongo
-    restart: unless-stopped
+    networks:
+      - app-net
+    env_file:
+      - ./.env.dev
     environment:
-      - .env.dev
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongo:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - 27017:27017
-    volumes:
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    restart: unless-stopped
   
   nginx:
     build: ./nginx
@@ -41,3 +50,6 @@ services:
       - 80:80
     depends_on:
       - backend
+
+volumes:
+  mongo:
