@@ -1,19 +1,24 @@
+import asyncio
 import routeros_api
 from routeros_api.api import RouterOsApi
-from pysnmp.hlapi import *
+from pysnmp.hlapi.asyncio import *
 from fastapi import FastAPI, Request, Response
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from secrets import token_bytes
 from base64 import b64encode
 from passlib.context import CryptContext
+from pymongo import MongoClient
 
 from models.auth import LoginRequest, Token, Account
+
+# client = MongoClient("mongodb://mongo:27017/")
+# mydb = client["db"]
 
 online_user = []
 
 middleware = Middleware(CORSMiddleware,
-                        allow_origins=["http://localhost:3000", "http://localhost:4000"],
+                        allow_origins=["*"],
                         allow_methods=["*"],
                         allow_headers=["*"],
                         )
@@ -23,6 +28,8 @@ auth_app = FastAPI()
 secure_app = FastAPI()
 app.mount('/auth', auth_app)
 app.mount('/api', secure_app)
+
+# print(client.list_database_names())
 
 IP_MIKROTIK = '192.168.252.134'
 OIDS = {
@@ -43,8 +50,6 @@ def get_password_hash(password):
 
 def is_authenticate(request: Request):
     authorization = request.headers.get('Authorization')
-    print(authorization)
-    print(request.headers)
     if not authorization:
         return False
     token = authorization.split(' ')[1]
@@ -63,7 +68,8 @@ async def check_authentication(request: Request, call_next):
 
 @secure_app.get('/')
 async def index():
-    return get_oid_data()
+    return await get_oid_data()
+    # return Response(status_code=200)
 
 
 @auth_app.post('/check_token/')
@@ -81,6 +87,7 @@ async def logout(request, token: Token):
 
 @auth_app.post('/login/')
 async def login(auth: LoginRequest):
+
     acc = Account(username=auth.username, hash_password=get_password_hash(auth.password),
                   token=b64encode(token_bytes(32)).decode(), active=True)
     online_user.append(acc)
@@ -112,8 +119,8 @@ def connect(username: str, password: str) -> RouterOsApi:
     return api
 
 
-def get_oid_data():
-    iterator = getCmd(
+async def get_oid_data():
+    error_indication, error_status, error_index, var_binds = await getCmd(
         SnmpEngine(),
         CommunityData('public', mpModel=1),
         UdpTransportTarget((IP_MIKROTIK, 161)),
@@ -124,16 +131,16 @@ def get_oid_data():
         lexicographicMode=False
     )
 
-    error_indication, error_status, error_index, var_binds = next(iterator)
     if error_indication:
         print(error_indication)
     elif error_status:
         print('%s at %s' % (error_status.prettyPrint(), error_index and var_binds[int(error_index) - 1][0] or '?'))
     else:
+        result_list = []
         for var_bind in var_binds:
             oid, data = [x.prettyPrint() for x in var_bind]
-            print(' = '.join([OIDS[oid], data]))
-            return ' = '.join([OIDS[oid], data])
+            result_list.append({'name': OIDS[oid], 'data': data})
+        return result_list
 
 # api = connect('admin', 'admin')
 # list = api.get_resource('/system/script')

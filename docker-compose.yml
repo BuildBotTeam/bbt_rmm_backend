@@ -3,14 +3,14 @@ version: "3.9"
 networks:
   app-net:
     driver: bridge
-  
+
 services:
   backend:
     build: ./
     image: backend
-    command: uvicorn main:app --host 0.0.0.0 --port 4000
+    command: uvicorn main:app --host 0.0.0.0 --port 4000 --reload
     volumes:
-        - .:/usr/src/app/
+      - .:/usr/src/app/
     networks:
       - app-net
     ports:
@@ -23,8 +23,11 @@ services:
     image: mongo
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      - .env.dev
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
   
   nginx:
     build: ./nginx
