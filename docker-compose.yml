@@ -1,0 +1,40 @@
+version: "3.9"
+
+networks:
+  app-net:
+    driver: bridge
+  
+services:
+  backend:
+    build: ./
+    image: backend
+    command: uvicorn main:app --port 4000
+    volumes:
+        - .:/usr/src/app/
+    networks:
+      - app-net
+    ports:
+      - 4000:4000
+    depends_on:
+      - mongo
+    restart: unless-stopped
+  
+  mongo:
+    image: mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+  
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    user: root
+    links:
+      - backend
+    networks:
+      - app-net
+    ports:
+      - 80:80
+    depends_on:
+      - backend
