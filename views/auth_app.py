@@ -19,6 +19,13 @@ async def check_token(request: Request):
     return Response(status_code=200 if is_authenticate(request) else 401)
 
 
+@auth_app.post('/login/')
+async def login(auth: LoginRequest):
+    acc = Account.get(username=auth.username)
+    if acc.check_password(auth.password) and acc.active:
+        return {'token': acc.token, 'username': acc.username}
+    return Response(status_code=401)
+
 # @auth_app.post('/logout/')
 # async def logout(request: Request):
 #     authorization = request.headers.get('Authorization')
@@ -29,11 +36,3 @@ async def check_token(request: Request):
 #     user.token = None
 #     user.save()
 #     return Response(status_code=401)
-
-
-@auth_app.post('/login/')
-async def login(auth: LoginRequest):
-    acc = Account.get(username=auth.username)
-    if acc.check_password(auth.password):
-        return {'token': acc.token, 'username': acc.username}
-    return Response(status_code=401)

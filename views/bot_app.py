@@ -1,6 +1,3 @@
-import random
-import string
-
 from aiogram import Dispatcher, Bot, F
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -28,7 +25,7 @@ async def command_start_handler(message: Message) -> None:
         [KeyboardButton(text="/create_user", )],
         [KeyboardButton(text="/change_status_user")]
     ]
-    keyboard = ReplyKeyboardMarkup(keyboard=kb)
+    keyboard = ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
     await message.answer(f"Hello, {message.from_user.id}!", reply_markup=keyboard)
 
 
@@ -53,15 +50,27 @@ async def change_status_user(message: Message, state: FSMContext) -> None:
     builder = InlineKeyboardBuilder()
     users = Account.filter()
     for user in users:
-        builder.add(InlineKeyboardButton(
+        builder.row(InlineKeyboardButton(
             text=f'{user.username} {"is_active" if user.active else "is_not_active"}',
             callback_data=user.id)
         )
+    builder.row(InlineKeyboardButton(
+        text=f'Отмена',
+        callback_data='$back')
+    )
     await message.answer(text="Select user", reply_markup=builder.as_markup())
     await state.set_state(UserState.status_user)
 
 
-@dp.callback_query(F.data)
+@dp.callback_query(F.data == '$back')
+async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(text='Отменено')
+    await callback.message.delete()
+    await state.clear()
+    await callback.answer()
+
+
+@dp.callback_query(UserState.status_user, F.data)
 async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     user = Account.get(id=callback.data)
@@ -69,4 +78,5 @@ async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
     user.save()
     await callback.message.answer(
         text=f'Status user is successfully change:\n{user.username} {"is_active" if user.active else "is_not_active"}')
+    await callback.message.delete()
     await callback.answer()
