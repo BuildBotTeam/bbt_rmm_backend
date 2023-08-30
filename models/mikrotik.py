@@ -1,18 +1,26 @@
+import ssl
 from pydantic import ConfigDict
-
 from controllers.mongo_controller import MongoDBModel
+from routeros_api.api import RouterOsApiPool
 
 
 class MikrotikRouter(MongoDBModel):
-    name: str
-    ip: str
+    host: str
     username: str
     password: str
-    port: int = 8728
-    favorite: bool
 
     class Meta:
         collection_name = 'mikrotik_routers'
+
+    def connect(self):
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        ssl_context.set_ciphers("ADH:ALL:@SECLEVEL=0")
+        connection = RouterOsApiPool(self.host, username=self.username, password=self.password,
+                                     use_ssl=True, ssl_verify=True, plaintext_login=True,
+                                     ssl_verify_hostname=True, ssl_context=ssl_context)
+        return connection
 
 
 def to_sneak(string: str) -> str:

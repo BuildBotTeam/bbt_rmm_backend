@@ -17,18 +17,14 @@ app.mount('/auth', auth_app)
 app.mount('/api', secure_app)
 
 
-@app.on_event('startup')
-async def start_bot():
-    loop = asyncio.get_event_loop()
-    loop.create_task(dp.start_polling(bot, polling_timeout=300))
+# @app.on_event('startup')
+# async def start_bot():
+#     loop = asyncio.get_event_loop()
+#     loop.create_task(dp.start_polling(bot, polling_timeout=300))
 
 
 @app.on_event("shutdown")
 async def shutdown_bot():
     await dp.stop_polling()
 
-# api = connect('admin', 'admin')
-# list = api.get_resource('/system/script')
-# for l in list.get():
-#     s = Script(**l)
-#     print(s)
+
