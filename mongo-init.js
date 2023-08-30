@@ -13,4 +13,4 @@ db.createUser(
 );
 db.createCollection('users');
 db.users.createIndex({"username": 1}, {unique: true})
-db.users.insert({username: 'admin'})
+db.users.insert({username: 'root', password: 'admin', email: 'crassair92@gmail.com'})

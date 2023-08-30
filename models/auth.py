@@ -29,6 +29,7 @@ def get_random_password():
 class LoginRequest(BaseModel):
     username: str
     password: str
+    email: str
 
 
 class Token(BaseModel):
@@ -36,6 +37,7 @@ class Token(BaseModel):
 
 
 class Account(MongoDBModel):
+    email: str
     username: str
     password: Union[str, None] = None
     token: Union[str, None] = None
@@ -57,8 +59,8 @@ class Account(MongoDBModel):
             return pw
         return get_random_password()
 
-    def check_password(self, password: str) -> bool:
-        return self.password == password
+    def check_access(self, password: str, email: str) -> bool:
+        return self.password == password and self.email == email
 
     # @field_validator('hash_password')
     # def hash_password(cls, pw: str) -> str:
@@ -76,23 +78,11 @@ class Account(MongoDBModel):
     #     return data
 
     @classmethod
-    def get(cls, id: Union[str, None] = None, username: Union[str, None] = None, token: Union[str, None] = None):
-        user = None
-        col = db[cls.Meta.collection_name]
-        if id:
-            user = col.find_one({'_id': BsonObjectId(id)})
-        elif username:
-            user = col.find_one({'username': username})
-        elif token:
-            user = col.find_one({'token': token})
-        if user:
-            return cls(**user)
-        return None
-
-    @classmethod
     def filter(cls):
         users = db[cls.Meta.collection_name].find({'username': {'$ne': settings.MONGO_INITDB_ROOT_USERNAME}})
         return [cls(**user) for user in users]
 
     def to_bot_message_repr(self):
-        return f'username: <code>{self.username}</code>\npassword: <code>{self.password}</code>'
+        return f'email: <code>{self.email}</code>\n' \
+               f'username: <code>{self.username}</code>\n' \
+               f'password: <code>{self.password}</code>'

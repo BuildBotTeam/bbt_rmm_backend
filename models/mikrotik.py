@@ -1,4 +1,6 @@
 import ssl
+from typing import Union
+
 from pydantic import ConfigDict
 from controllers.mongo_controller import MongoDBModel
 from routeros_api.api import RouterOsApiPool
@@ -8,6 +10,7 @@ class MikrotikRouter(MongoDBModel):
     host: str
     username: str
     password: str
+    user_id: Union[str, None] = None
 
     class Meta:
         collection_name = 'mikrotik_routers'

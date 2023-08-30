@@ -16,14 +16,17 @@ dp = Dispatcher()
 
 class UserState(StatesGroup):
     type_username = State()
+    type_email = State()
     status_user = State()
+    delete_user = State()
 
 
 @dp.message(CommandStart(), F.chat.id.in_(ADMIN_TG))
 async def command_start_handler(message: Message) -> None:
     kb = [
         [KeyboardButton(text="/create_user", )],
-        [KeyboardButton(text="/change_status_user")]
+        [KeyboardButton(text="/change_status_user")],
+        [KeyboardButton(text="/delete_user")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
     await message.answer(f"Hello, {message.from_user.id}!", reply_markup=keyboard)
@@ -36,9 +39,19 @@ async def create_user(message: Message, state: FSMContext) -> None:
 
 
 @dp.message(UserState.type_username)
+async def type_email(message: Message, state: FSMContext):
+    await state.update_data(username=message.text.lower())
+    await message.answer('Type email')
+    await state.set_state(UserState.type_email)
+
+
+@dp.message(UserState.type_email)
 async def result_user(message: Message, state: FSMContext):
+    username = await state.get_data()
+    username = username.get('username')
     await state.clear()
-    user = Account(username=message.text.lower(), password=None, active=True).change_token().create()
+    user = Account(email=message.text.lower(), username=username, password=None,
+                   active=True).change_token().create()
     if user:
         await message.answer(text=f'User successful created:\n{user.to_bot_message_repr()}', parse_mode='HTML')
     else:
@@ -47,8 +60,11 @@ async def result_user(message: Message, state: FSMContext):
 
 @dp.message(Command('change_status_user'), F.chat.id.in_(ADMIN_TG))
 async def change_status_user(message: Message, state: FSMContext) -> None:
-    builder = InlineKeyboardBuilder()
     users = Account.filter()
+    if not users:
+        await message.answer(text="Apps haven't users for this options")
+        return await state.clear()
+    builder = InlineKeyboardBuilder()
     for user in users:
         builder.row(InlineKeyboardButton(
             text=f'{user.username} {"is_active" if user.active else "is_not_active"}',
@@ -73,10 +89,42 @@ async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(UserState.status_user, F.data)
 async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
     await state.clear()
+    print(callback.data)
     user = Account.get(id=callback.data)
     user.active = not user.active
     user.save()
     await callback.message.answer(
         text=f'Status user is successfully change:\n{user.username} {"is_active" if user.active else "is_not_active"}')
+    await callback.message.delete()
+    await callback.answer()
+
+
+@dp.message(Command('delete_user'), F.chat.id.in_(ADMIN_TG))
+async def change_status_user(message: Message, state: FSMContext) -> None:
+    builder = InlineKeyboardBuilder()
+    users = Account.filter()
+    for user in users:
+        builder.row(InlineKeyboardButton(
+            text=f'{user.username} {"is_active" if user.active else "is_not_active"}',
+            callback_data=user.id)
+        )
+    builder.row(InlineKeyboardButton(
+        text=f'Отмена',
+        callback_data='$back')
+    )
+    await message.answer(text="Select user for DELETE", reply_markup=builder.as_markup())
+    await state.set_state(UserState.delete_user)
+
+
+@dp.callback_query(UserState.delete_user, F.data)
+async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    user = Account.get(id=callback.data)
+    username = user.username
+    is_success = user.delete()
+    if is_success:
+        await callback.message.answer(text=f'{username} successful delete')
+    else:
+        await callback.message.answer(text=f'{username} delete failed')
     await callback.message.delete()
     await callback.answer()
