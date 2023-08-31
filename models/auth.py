@@ -79,7 +79,7 @@ class Account(MongoDBModel):
 
     @classmethod
     def filter(cls):
-        users = db[cls.Meta.collection_name].find({'username': {'$ne': settings.MONGO_INITDB_ROOT_USERNAME}})
+        users = db[cls.Meta.collection_name].find({'admin': False})
         return [cls(**user) for user in users]
 
     def to_bot_message_repr(self):

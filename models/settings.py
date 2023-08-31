@@ -7,7 +7,10 @@ class Settings(BaseSettings):
     MONGO_INITDB_DATABASE: str
     BOT_TOKEN: str
     ADMIN_TG: str
+    DB_ADMIN_USERNAME: str
+    DB_ADMIN_EMAIL: str
+    DB_ADMIN_PASSWORD: str
 
-    model_config = SettingsConfigDict(env_file='.env.dev', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 settings = Settings()
