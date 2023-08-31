@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.cors import CORSMiddleware
+
+from controllers.router_controller import get_logs
 from views.mikrotik_router_app import mikrotik_router_app
 from views.auth_app import auth_app, TokenAuthBackend
 from views.bot_app import dp, bot
@@ -21,9 +23,10 @@ secure_app.mount('/mikrotik_routers', mikrotik_router_app)
 
 
 @app.on_event('startup')
-async def start_bot():
+async def start_services():
     loop = asyncio.get_event_loop()
-    loop.create_task(dp.start_polling(bot, polling_timeout=300))
+    loop.create_task(get_logs())
+    loop.create_task(dp.start_polling(bot))
 
 
 @app.on_event("shutdown")
