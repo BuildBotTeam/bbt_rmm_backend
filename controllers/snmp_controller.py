@@ -20,11 +20,14 @@ async def get_oid_data():
 
     if error_indication:
         print(error_indication)
-    elif error_status:
+        return None
+
+    if error_status:
         print('%s at %s' % (error_status.prettyPrint(), error_index and var_binds[int(error_index) - 1][0] or '?'))
-    else:
-        result_list = []
-        for var_bind in var_binds:
-            oid, data = [x.prettyPrint() for x in var_bind]
-            result_list.append({'name': OIDS[oid], 'data': data})
-        return result_list
+        return None
+
+    result_list = []
+    for var_bind in var_binds:
+        oid, data = [x.prettyPrint() for x in var_bind]
+        result_list.append({'name': OIDS[oid], 'data': data})
+    return result_list

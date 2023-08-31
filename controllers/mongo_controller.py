@@ -36,16 +36,24 @@ class MongoDBModel(BaseModel):
         return cls(**data) if data else None
 
     @classmethod
-    def filter(cls, **kwargs):
-        data_list = db[cls.Meta.collection_name].find(kwargs)
+    def filter(cls, ids: Union[list, None] = None,  **kwargs):
+        if isinstance(ids, list):
+            data_list = db[cls.Meta.collection_name].find({'_id': {'$in': ids}})
+        else:
+            data_list = db[cls.Meta.collection_name].find(kwargs)
         return [cls(**data) for data in data_list]
 
     @classmethod
-    def remove(cls, id: Union[list, str]):
-        if isinstance(id, list):
-            db[cls.Meta.collection_name].delete_many({'_id': {'$in': [BsonObjectId(v) for v in id]}})
+    def bulk_create(cls, data: list):
+        result = db[cls.Meta.collection_name].insert_many(data)
+        return cls.filter(result.inserted_ids)
+
+    @classmethod
+    def bulk_delete(cls, ids: Union[list, None] = None):
+        if not ids:
+            db[cls.Meta.collection_name].delete_many({})
         else:
-            db[cls.Meta.collection_name].delete_one({'_id': BsonObjectId(id)})
+            db[cls.Meta.collection_name].delete_many({'_id': {'$in': [BsonObjectId(v) for v in ids]}})
 
     def create(self):
         document = self.model_dump()
