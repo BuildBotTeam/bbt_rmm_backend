@@ -52,7 +52,7 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_text()
-            await manager.broadcast(user.id, f"Client #{user.username} says: {data}")
+            await manager.broadcast(user.id, 'on_connect', f"Client #{user.username} says: {data}")
     except WebSocketDisconnect:
         manager.disconnect(user.id)
-        await manager.broadcast(user.id, f"Client #{user.username} left the chat")
+        await manager.broadcast(user.id, 'on_connect', f"Client #{user.username} left the chat")

@@ -13,6 +13,7 @@ class MikrotikSNMPLogs(BaseModel):
     bytes_in: Union[str, None] = None
     bytes_out: Union[str, None] = None
     online: bool = True
+    version_os: Union[str, None] = None
 
 
 class MikrotikLogs(BaseModel):
@@ -63,7 +64,9 @@ class MikrotikRouter(MongoDBModel):
     host: str
     username: str
     password: str
+    version_os: Union[str, None] = None
     logs: list[MikrotikLogs] = []
+    status_log: list[MikrotikSNMPLogs] = []
     user_id: Union[str, None] = None
     is_online: bool = True
 

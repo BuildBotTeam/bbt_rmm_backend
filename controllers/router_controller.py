@@ -9,6 +9,7 @@ from views.ws_app import manager
 OIDS = {
     '1.3.6.1.2.1.31.1.1.1.6.1': 'bytes_in',
     '1.3.6.1.2.1.31.1.1.1.10.1': 'bytes_out',
+    '1.3.6.1.2.1.47.1.1.1.1.2.65536': 'version_os',
 }
 
 
@@ -20,29 +21,35 @@ async def get_oid_data(router: MikrotikRouter, counter):
         CommunityData('public', mpModel=1),
         UdpTransportTarget((router.host, 161)),
         ContextData(),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.31.1.1.1.6.1')),
-        ObjectType(ObjectIdentity('1.3.6.1.2.1.31.1.1.1.10.1')),
+        *[ObjectType(ObjectIdentity(oid)) for oid in OIDS.keys()],
         lookupMib=False,
         lexicographicMode=False
     )
 
     result = {'time': datetime.now().strftime('%m-%d %H:%M:%S')}
-    if error_indication and router.is_online:
-        router.is_online = False
-        router.save()
-        await manager.broadcast(router.user_id, router.model_dump(exclude='password'))
-        print('error', router.host)
+    if error_indication:
+        if router.is_online:
+            router.is_online = False
+            result['online'] = False
+            router.status_log.append(MikrotikSNMPLogs(**result))
+            router.save()
+            await manager.broadcast(router.user_id, 'update_router', router.model_dump(exclude='password'))
         return None
 
     if not router.is_online:
         router.is_online = True
         router.save()
-        await manager.broadcast(router.user_id, router.model_dump(exclude='password'))
+        await manager.broadcast(router.user_id, 'update_router', router.model_dump(exclude='password'))
 
-    for var_bind in var_binds:
-        oid, data = [x.prettyPrint() for x in var_bind]
-        result[OIDS[oid]] = data
-    print(MikrotikSNMPLogs(**result))
+    if counter == 0:
+        for var_bind in var_binds:
+            oid, data = [x.prettyPrint() for x in var_bind]
+            result[OIDS[oid]] = data
+        version_os = result.get('version_os')
+        if version_os != router.version_os:
+            router.version_os = version_os
+        router.status_log.append(MikrotikSNMPLogs(**result))
+        router.save()
 
 
 async def get_status():
@@ -50,11 +57,9 @@ async def get_status():
     while True:
         if counter == 5:
             counter = 0
-        print('start_status')
         routers: list[MikrotikRouter] = MikrotikRouter.filter()
         tasks = (get_oid_data(router, counter) for router in routers)
         await asyncio.gather(*tasks)
-        print('end_status', counter)
         counter += 1
         await asyncio.sleep(5)
 
@@ -65,11 +70,12 @@ async def get_status():
 
 async def get_logs():
     while True:
-        print('start gather logs')
         routers: list[MikrotikRouter] = MikrotikRouter.filter()
-        tasks = (router.get_logs() for router in routers)
+        tasks = []
+        for router in routers:
+            if router.is_online:
+                tasks.append(router.get_logs())
         await asyncio.gather(*tasks)
-        print('end gather logs')
         await asyncio.sleep(20)
 
 # endregion
