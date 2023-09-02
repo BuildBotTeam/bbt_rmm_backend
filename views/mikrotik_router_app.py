@@ -1,9 +1,12 @@
-from typing import Union
-from fastapi import FastAPI, Request, Response
+from typing import Union, Annotated
+from fastapi import FastAPI, Request, Response, Query, Depends
+from starlette import status
+from starlette.exceptions import WebSocketException
+from starlette.websockets import WebSocket
+
 from models.mikrotik import MikrotikRouter, MikrotikLogs
 
 mikrotik_router_app = FastAPI()
-connection = None
 
 
 @mikrotik_router_app.get('/')
@@ -30,12 +33,11 @@ async def get_mikrotik_router(req: Request, uid: str):
 @mikrotik_router_app.post('/')
 async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     data.user_id = req.user.id
-    api = data.connect()
-    if not api:
-        return Response('No route to host', status_code=500)
-    data.add_logs(api.get_api().get_resource('/log').get())
-    data = data.create()
-    return data.model_dump()
+    is_online = await data.get_logs()
+    if is_online:
+        data = data.create()
+        return data.model_dump()
+    return Response(status_code=500)
 
 
 @mikrotik_router_app.put('/')
@@ -54,3 +56,12 @@ async def delete_mikrotik_router(req: Request, uid: str):
 async def get_mikrotik_router_logs(uid: str):
     data = MikrotikLogs.filter(router_id=uid)
     return data
+
+
+# async def get_token(
+#         websocket: WebSocket,
+#         token: Annotated[Union[str, None], Query()] = None,
+# ):
+#     if token is None:
+#         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+#     return token

@@ -2,9 +2,17 @@ import ssl
 from datetime import datetime
 from typing import Union
 
+import asyncssh
 from pydantic import ConfigDict, BaseModel
 from controllers.mongo_controller import MongoDBModel, db
 from routeros_api.api import RouterOsApiPool
+
+
+class MikrotikSNMPLogs(BaseModel):
+    time: str
+    bytes_in: int = 0
+    bytes_out: int = 0
+    online: bool = True
 
 
 class MikrotikLogs(BaseModel):
@@ -17,12 +25,16 @@ class MikrotikLogs(BaseModel):
         result_list = []
         for log in logs:
             res = log.strip().split()
+            if not res:
+                continue
+            if len(res[0]) == 5:
+                res[0] += ' ' + res.pop(1)
             time = ''.join(res[:1])
             topics = ''.join(res[1:2])
             message = ' '.join(res[2:])
             if 'via ssh' in message:
                 continue
-            if len(time) <= 8:
+            if len(time) == 8:
                 now = datetime.now()
                 day = str(now.day).rjust(2, '0')
                 month = str(now.month).rjust(2, '0')
@@ -40,39 +52,40 @@ class MikrotikLogs(BaseModel):
                     continue
                 if log.time > last_log.time or (log.time == last_log.time and last_log.message != log.message):
                     result_list.append(log)
-            return result_list
-        return logs
+        else:
+            result_list = logs
+        result_list.reverse()
+        return result_list
 
 
 class MikrotikRouter(MongoDBModel):
+    name: str = ''
     host: str
     username: str
     password: str
     logs: list[MikrotikLogs] = []
     user_id: Union[str, None] = None
+    is_online: bool = True
 
     class Meta:
         collection_name = 'mikrotik_routers'
 
     def add_logs(self, logs: list):
         if logs and isinstance(logs, list):
-            last_log = self.logs[-1] if self.logs else None
+            last_log = self.logs[0] if self.logs else None
             self.logs += MikrotikLogs.add_newest_logs(last_log, logs)
             self.save()
 
-    def connect(self):
+    async def get_logs(self):
         try:
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            ssl_context.set_ciphers("ADH:ALL:@SECLEVEL=0")
-            connection = RouterOsApiPool(self.host, username=self.username, password=self.password,
-                                         use_ssl=True, ssl_verify=True, plaintext_login=True,
-                                         ssl_verify_hostname=True, ssl_context=ssl_context)
-            return connection
+            async with asyncssh.connect(self.host, username=self.username, password=self.password,
+                                        known_hosts=None) as conn:
+                result = await conn.run('log print')
+                self.add_logs(result.stdout.replace('\r', '').split('\n'))
+                return True
         except Exception as e:
             print(e)
-            return None
+            return False
 
 
 def to_sneak(string: str) -> str:
