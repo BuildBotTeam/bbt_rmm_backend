@@ -4,9 +4,11 @@ import string
 
 from bson import ObjectId as BsonObjectId
 from pydantic import BaseModel, field_validator, Field
-from typing import Union
+from typing import Union, Optional
 from secrets import token_bytes
 from base64 import b64encode
+
+from starlette.websockets import WebSocket
 
 from controllers.mongo_controller import db, MongoDBModel
 from models.settings import settings

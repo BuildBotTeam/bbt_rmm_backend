@@ -4,9 +4,11 @@ from datetime import datetime
 from models.mikrotik import MikrotikRouter, MikrotikSNMPLogs
 from pysnmp.hlapi.asyncio import *
 
+from views.ws_app import manager
+
 OIDS = {
-    '1.3.6.1.2.1.31.1.1.1.6.1': 'bytes-in',
-    '1.3.6.1.2.1.31.1.1.1.10.1': 'bytes-out',
+    '1.3.6.1.2.1.31.1.1.1.6.1': 'bytes_in',
+    '1.3.6.1.2.1.31.1.1.1.10.1': 'bytes_out',
 }
 
 
@@ -24,14 +26,18 @@ async def get_oid_data(router: MikrotikRouter, counter):
         lexicographicMode=False
     )
 
-    result = {'time': datetime.now().strftime('MM-DD HH:mm:ss')}
-    if error_indication:
-        print(error_indication)
+    result = {'time': datetime.now().strftime('%m-%d %H:%M:%S')}
+    if error_indication and router.is_online:
+        router.is_online = False
+        router.save()
+        await manager.broadcast(router.user_id, router.model_dump(exclude='password'))
+        print('error', router.host)
         return None
 
-    if error_status:
-        print('%s at %s' % (error_status.prettyPrint(), error_index and var_binds[int(error_index) - 1][0] or '?'))
-        return None
+    if not router.is_online:
+        router.is_online = True
+        router.save()
+        await manager.broadcast(router.user_id, router.model_dump(exclude='password'))
 
     for var_bind in var_binds:
         oid, data = [x.prettyPrint() for x in var_bind]
@@ -40,12 +46,17 @@ async def get_oid_data(router: MikrotikRouter, counter):
 
 
 async def get_status():
-    print('start_status')
     counter = 0
-    routers: list[MikrotikRouter] = MikrotikRouter.filter()
-    tasks = (get_oid_data(router, counter) for router in routers)
-    await asyncio.gather(*tasks)
-    await asyncio.sleep(5)
+    while True:
+        if counter == 5:
+            counter = 0
+        print('start_status')
+        routers: list[MikrotikRouter] = MikrotikRouter.filter()
+        tasks = (get_oid_data(router, counter) for router in routers)
+        await asyncio.gather(*tasks)
+        print('end_status', counter)
+        counter += 1
+        await asyncio.sleep(5)
 
 
 # endregion
@@ -54,10 +65,11 @@ async def get_status():
 
 async def get_logs():
     while True:
-        print('start logs')
+        print('start gather logs')
         routers: list[MikrotikRouter] = MikrotikRouter.filter()
         tasks = (router.get_logs() for router in routers)
         await asyncio.gather(*tasks)
+        print('end gather logs')
         await asyncio.sleep(20)
 
 # endregion

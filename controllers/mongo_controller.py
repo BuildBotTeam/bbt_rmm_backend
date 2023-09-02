@@ -60,7 +60,8 @@ class MongoDBModel(BaseModel):
         try:
             result = db[self.__class__.Meta.collection_name].insert_one(document)
             return self.__class__.get(id=result.inserted_id)
-        except Exception:
+        except Exception as e:
+            print(e)
             return None
 
     def save(self):

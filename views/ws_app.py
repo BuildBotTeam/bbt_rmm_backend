@@ -1,20 +1,39 @@
-from typing import Union
+from typing import Annotated, Union
 
+from fastapi import Query
+from starlette import status
+from starlette.exceptions import WebSocketException
 from starlette.websockets import WebSocket
 
-from main import app
+from models.auth import Account
 
 
-@app.websocket("/ws")
-async def websocket_endpoint(
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections = {}
+
+    async def connect(self, user_id, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+
+    def disconnect(self, user_id):
+        self.active_connections.pop(user_id)
+
+    async def broadcast(self, user_id, message: str):
+        ws = self.active_connections[user_id]
+        await ws.send_text(message)
+
+
+manager = ConnectionManager()
+
+
+async def get_token(
         websocket: WebSocket,
+        token: Annotated[Union[str, None], Query()] = None,
 ):
-    print(websocket)
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        print('connect')
-        await websocket.send_text(f"Connect")
-        if q is not None:
-            await websocket.send_text(f"Query parameter q is: {q}")
-        await websocket.send_text(f"Message text was: {data}")
+    if token is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    user = Account.get(token=token)
+    if user and user.active:
+        return user
+    raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)

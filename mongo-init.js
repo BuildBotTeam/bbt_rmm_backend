@@ -22,7 +22,7 @@ db.createUser(
 
 db.createCollection('users');
 db.users.createIndex({"username": 1}, {unique: true})
-db.mikrotik_routers.createIndex({"url": 1}, {unique: true})
+db.mikrotik_routers.createIndex({"host": 1}, {unique: true})
 const usernames = process.env.DB_ADMIN_USERNAME.toString().split(' ')
 const emails = process.env.DB_ADMIN_EMAIL.toString().split(' ')
 const passwords = process.env.DB_ADMIN_PASSWORD.toString().split(' ')

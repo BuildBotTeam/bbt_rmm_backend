@@ -3,15 +3,15 @@ from datetime import datetime
 from typing import Union
 
 import asyncssh
-from pydantic import ConfigDict, BaseModel
+from pydantic import ConfigDict, BaseModel, Field
 from controllers.mongo_controller import MongoDBModel, db
 from routeros_api.api import RouterOsApiPool
 
 
 class MikrotikSNMPLogs(BaseModel):
     time: str
-    bytes_in: int = 0
-    bytes_out: int = 0
+    bytes_in: Union[str, None] = None
+    bytes_out: Union[str, None] = None
     online: bool = True
 
 
@@ -82,10 +82,8 @@ class MikrotikRouter(MongoDBModel):
                                         known_hosts=None) as conn:
                 result = await conn.run('log print')
                 self.add_logs(result.stdout.replace('\r', '').split('\n'))
-                return True
         except Exception as e:
             print(e)
-            return False
 
 
 def to_sneak(string: str) -> str:
