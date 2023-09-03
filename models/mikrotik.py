@@ -5,7 +5,7 @@ from typing import Union
 import asyncssh
 from pydantic import ConfigDict, BaseModel, Field
 from controllers.mongo_controller import MongoDBModel, db
-from routeros_api.api import RouterOsApiPool
+from bson import ObjectId as BsonObjectId
 
 
 class MikrotikSNMPLogs(BaseModel):
@@ -87,6 +87,25 @@ class MikrotikRouter(MongoDBModel):
                 self.add_logs(result.stdout.replace('\r', '').split('\n'))
         except Exception as e:
             print(e)
+
+    @classmethod
+    async def try_send_script(cls, mikrotik_id_list: list[str]):
+        routers: list[MikrotikRouter] = cls.filter(ids=mikrotik_id_list)
+        result_list = []
+        for router in routers:
+            if router.is_online:
+                try:
+                    async with asyncssh.connect(router.host, username=router.username, password=router.password,
+                                                known_hosts=None) as conn:
+                        result = await conn.run('system/script run test')
+                        if result.exit_status != 0:
+                            return False, result.stdout
+                        result_list.append(result.stdout)
+                except Exception as e:
+                    print(e)
+                    return False, e
+        return True, result_list
+
 
 
 def to_sneak(string: str) -> str:

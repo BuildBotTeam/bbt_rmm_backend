@@ -57,3 +57,11 @@ async def delete_mikrotik_router(req: Request, uid: str):
 async def get_mikrotik_router_logs(uid: str):
     data = MikrotikLogs.filter(router_id=uid)
     return data
+
+
+@mikrotik_router_app.post('/command/send_script/')
+async def mirotik_send_script(req: Request):
+    data = await req.json()
+    ids: list[str] = data.get('ids', [])
+    is_success, result = await MikrotikRouter.try_send_script(ids)
+    return {'is_success': is_success, 'result': result}

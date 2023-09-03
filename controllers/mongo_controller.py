@@ -38,7 +38,7 @@ class MongoDBModel(BaseModel):
     @classmethod
     def filter(cls, ids: Union[list, None] = None,  **kwargs):
         if isinstance(ids, list):
-            data_list = db[cls.Meta.collection_name].find({'_id': {'$in': ids}})
+            data_list = db[cls.Meta.collection_name].find({'_id': {'$in': [BsonObjectId(m) for m in ids]}})
         else:
             data_list = db[cls.Meta.collection_name].find(kwargs)
         return [cls(**data) for data in data_list]
