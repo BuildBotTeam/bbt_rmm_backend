@@ -124,7 +124,7 @@ class MikrotikRouter(MongoDBModel):
                                     known_hosts=None) as conn:
             result = await conn.run(raw_command)
             await manager.broadcast(router.user_id, 'command_result',
-                                    {'is_success': result.exit_status != 0,
+                                    {'is_success': result.exit_status == 0,
                                      'result': f'{router.name} - {router.host}:\n{result.stdout}{"-" * 50}\n\n'})
 
 
