@@ -89,23 +89,45 @@ class MikrotikRouter(MongoDBModel):
             print(e)
 
     @classmethod
-    async def try_send_script(cls, mikrotik_id_list: list[str]):
-        routers: list[MikrotikRouter] = cls.filter(ids=mikrotik_id_list)
-        result_list = []
+    async def ping(cls, ids: list[str], host: str, count: int = 1, **kwargs):
+        command = f'ping {host} count={count}'
+        return await cls.try_send_command(ids, command)
+
+    @classmethod
+    async def send_script(cls, ids: list[str], script_name: str, source: str, **kwargs):
+        command = f'system/script/ add name={script_name} source="{source}"; system/script/ run {script_name}'
+        result = await cls.try_send_command(ids, command)
+        return result
+
+    @classmethod
+    async def get_scripts(cls, ids: list[str], **kwargs):
+        command = f'system/script/ print'
+        result = await cls.try_send_command(ids, command)
+        return result
+
+    @classmethod
+    async def remove_script(cls, ids: list[str], script_name: str, **kwargs):
+        command = f'system/script/ remove {script_name}'
+        result = await cls.try_send_command(ids, command)
+        return result
+
+    @classmethod
+    async def try_send_command(cls, ids: list[str], raw_command: str, **kwargs):
+        routers: list[MikrotikRouter] = cls.filter(ids=ids)
+        result_string = ''
         for router in routers:
             if router.is_online:
                 try:
                     async with asyncssh.connect(router.host, username=router.username, password=router.password,
                                                 known_hosts=None) as conn:
-                        result = await conn.run('system/script run test')
+                        result = await conn.run(raw_command)
                         if result.exit_status != 0:
-                            return False, result.stdout
-                        result_list.append(result.stdout)
+                            return False, f'{router.name} - {router.host}:\n' + result.stdout
+                        result_string += f'{router.name} - {router.host}:\n{result.stdout}{"-" * 50}\n'
                 except Exception as e:
                     print(e)
                     return False, e
-        return True, result_list
-
+        return True, result_string
 
 
 def to_sneak(string: str) -> str:

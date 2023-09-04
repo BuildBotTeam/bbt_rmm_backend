@@ -59,9 +59,21 @@ async def get_mikrotik_router_logs(uid: str):
     return data
 
 
-@mikrotik_router_app.post('/command/send_script/')
-async def mirotik_send_script(req: Request):
+commands = {
+    'ping': MikrotikRouter.ping,
+    'send_script': MikrotikRouter.send_script,
+    'get_scripts': MikrotikRouter.get_scripts,
+    'remove_script': MikrotikRouter.remove_script,
+    'raw_command': MikrotikRouter.try_send_command,
+}
+
+
+@mikrotik_router_app.post('/command/send_command/')
+async def mikrotik_ping(req: Request):
     data = await req.json()
-    ids: list[str] = data.get('ids', [])
-    is_success, result = await MikrotikRouter.try_send_script(ids)
+    command = data.pop('command')
+    func = commands.get(command)
+    if not command or not func:
+        return Response('command is required!', status_code=400)
+    is_success, result = await func(**data)
     return {'is_success': is_success, 'result': result}
