@@ -75,5 +75,5 @@ async def mikrotik_ping(req: Request):
     func = commands.get(command)
     if not command or not func:
         return Response('command is required!', status_code=400)
-    is_success, result = await func(**data)
-    return {'is_success': is_success, 'result': result}
+    await func(**data)
+    return Response(status_code=200)

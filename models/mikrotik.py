@@ -1,3 +1,4 @@
+import asyncio
 import ssl
 from datetime import datetime
 from typing import Union
@@ -6,6 +7,8 @@ import asyncssh
 from pydantic import ConfigDict, BaseModel, Field
 from controllers.mongo_controller import MongoDBModel, db
 from bson import ObjectId as BsonObjectId
+
+from views.ws_app import manager
 
 
 class MikrotikSNMPLogs(BaseModel):
@@ -91,43 +94,38 @@ class MikrotikRouter(MongoDBModel):
     @classmethod
     async def ping(cls, ids: list[str], host: str, count: int = 1, **kwargs):
         command = f'ping {host} count={count}'
-        return await cls.try_send_command(ids, command)
+        await cls.try_send_command(ids, command)
 
     @classmethod
     async def send_script(cls, ids: list[str], script_name: str, source: str, **kwargs):
         command = f'system/script/ add name={script_name} source="{source}"; system/script/ run {script_name}'
-        result = await cls.try_send_command(ids, command)
-        return result
+        await cls.try_send_command(ids, command)
 
     @classmethod
     async def get_scripts(cls, ids: list[str], **kwargs):
         command = f'system/script/ print'
-        result = await cls.try_send_command(ids, command)
-        return result
+        await cls.try_send_command(ids, command)
 
     @classmethod
     async def remove_script(cls, ids: list[str], script_name: str, **kwargs):
         command = f'system/script/ remove {script_name}'
-        result = await cls.try_send_command(ids, command)
-        return result
+        await cls.try_send_command(ids, command)
 
     @classmethod
     async def try_send_command(cls, ids: list[str], raw_command: str, **kwargs):
         routers: list[MikrotikRouter] = cls.filter(ids=ids)
-        result_string = ''
         for router in routers:
             if router.is_online:
-                try:
-                    async with asyncssh.connect(router.host, username=router.username, password=router.password,
-                                                known_hosts=None) as conn:
-                        result = await conn.run(raw_command)
-                        if result.exit_status != 0:
-                            return False, f'{router.name} - {router.host}:\n' + result.stdout
-                        result_string += f'{router.name} - {router.host}:\n{result.stdout}{"-" * 50}\n'
-                except Exception as e:
-                    print(e)
-                    return False, e
-        return True, result_string
+                asyncio.create_task(cls.send_command(router, raw_command))
+
+    @classmethod
+    async def send_command(cls, router, raw_command: str):
+        async with asyncssh.connect(router.host, username=router.username, password=router.password,
+                                    known_hosts=None) as conn:
+            result = await conn.run(raw_command)
+            await manager.broadcast(router.user_id, 'command_result',
+                                    {'is_success': result.exit_status != 0,
+                                     'result': f'{router.name} - {router.host}:\n{result.stdout}{"-" * 50}\n\n'})
 
 
 def to_sneak(string: str) -> str:

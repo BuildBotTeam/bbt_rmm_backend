@@ -32,9 +32,9 @@ secure_app.mount('/mikrotik_routers', mikrotik_router_app)
 
 @app.on_event('startup')
 async def start_services():
-    asyncio.create_task(get_logs())
+    # asyncio.create_task(get_logs())
     asyncio.create_task(get_status())
-    asyncio.create_task(dp.start_polling(bot))
+    # asyncio.create_task(dp.start_polling(bot))
 
 
 @app.on_event("shutdown")

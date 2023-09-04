@@ -71,11 +71,10 @@ async def get_status():
 async def get_logs():
     while True:
         routers: list[MikrotikRouter] = MikrotikRouter.filter()
-        tasks = []
         for router in routers:
             if router.is_online:
-                tasks.append(router.get_logs())
-        await asyncio.gather(*tasks)
+                asyncio.create_task(router.get_logs())
         await asyncio.sleep(20)
+
 
 # endregion
