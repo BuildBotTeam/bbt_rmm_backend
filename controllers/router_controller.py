@@ -48,6 +48,7 @@ async def get_oid_data(router: MikrotikRouter, counter):
         version_os = result.get('version_os')
         if version_os != router.version_os:
             router.version_os = version_os
+            await manager.broadcast(router.user_id, 'update_router', router.model_dump(exclude='password'))
         router.status_log.append(MikrotikSNMPLogs(**result))
         router.save()
 
@@ -55,7 +56,7 @@ async def get_oid_data(router: MikrotikRouter, counter):
 async def get_status():
     counter = 0
     while True:
-        if counter == 5:
+        if counter == 20:
             counter = 0
         routers: list[MikrotikRouter] = MikrotikRouter.filter()
         tasks = (get_oid_data(router, counter) for router in routers)

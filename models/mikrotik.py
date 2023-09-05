@@ -25,7 +25,7 @@ class MikrotikLogs(BaseModel):
     @classmethod
     def convert_log(cls, log):
         res = log.strip().split()
-        return cls(datetime=datetime.now().isoformat(), topics=res[0], message=res[1])
+        return cls(datetime=datetime.now().isoformat(), topics=res[0], message=' '.join(res[1:]))
 
 
 class MikrotikRouter(MongoDBModel):
@@ -33,6 +33,7 @@ class MikrotikRouter(MongoDBModel):
     host: str
     username: str
     password: str
+    topics: list[str] = []
     version_os: Union[str, None] = None
     logs: list[MikrotikLogs] = []
     status_log: list[MikrotikSNMPLogs] = []
@@ -49,22 +50,23 @@ class MikrotikRouter(MongoDBModel):
 
     @classmethod
     async def ping(cls, ids: list[str], host: str, count: int = 1, **kwargs):
-        command = f'ping {host} count={count}'
+        command = f'/ping {host} count={count}'
         await cls.try_send_command(ids, command)
 
     @classmethod
     async def send_script(cls, ids: list[str], script_name: str, source: str, **kwargs):
-        command = f'system/script/ add name={script_name} source="{source}"; system/script/ run {script_name}'
+        source = source.replace('\"', '\\\"')
+        command = f'/system/script/ add name="{script_name}" source="{source}";/system/script/ run {script_name};'
         await cls.try_send_command(ids, command)
 
     @classmethod
     async def get_scripts(cls, ids: list[str], **kwargs):
-        command = f'system/script/ print'
+        command = f'/system/script/ print'
         await cls.try_send_command(ids, command)
 
     @classmethod
     async def remove_script(cls, ids: list[str], script_name: str, **kwargs):
-        command = f'system/script/ remove {script_name}'
+        command = f'/system/script/ remove {script_name}'
         await cls.try_send_command(ids, command)
 
     @classmethod
@@ -82,6 +84,13 @@ class MikrotikRouter(MongoDBModel):
             await manager.broadcast(router.user_id, 'command_result',
                                     {'is_success': result.exit_status == 0,
                                      'result': f'{router.name} - {router.host}:\n{result.stdout}{"-" * 50}\n\n'})
+
+    async def connect_to_syslog(self):
+        command = '/system/logging/action add remote=192.168.252.192 name="bbtrmm" remote-port=514 target=remote;'
+        for topic in self.topics:
+            command += f'/system/logging add action="bbtrmm" topics={topic};'
+        command += '/log error message="test message on create connection to syslog";'
+        await self.send_command(router=self, raw_command=command)
 
 
 def to_sneak(string: str) -> str:

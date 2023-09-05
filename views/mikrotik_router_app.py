@@ -35,6 +35,7 @@ async def get_mikrotik_router(req: Request, uid: str):
 async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     data.user_id = req.user.id
     data = data.create()
+    await data.connect_to_syslog()
     if data:
         return data.model_dump(exclude='password')
     return Response(status_code=500)
