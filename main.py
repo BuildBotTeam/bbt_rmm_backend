@@ -1,19 +1,18 @@
 import asyncio
-from typing import Annotated, Union
+import socketserver
+from typing import Annotated, Tuple
 
-from fastapi import FastAPI, Query, Cookie, Depends
-from starlette import status
-from starlette.exceptions import WebSocketException
+from fastapi import FastAPI, Depends
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from controllers.router_controller import get_logs, get_status
+from controllers.router_controller import get_status
 from models.auth import Account
 from views.mikrotik_router_app import mikrotik_router_app
 from views.auth_app import auth_app, TokenAuthBackend
-from views.bot_app import dp, bot
+from views.bot_app import dp
 from views.ws_app import get_token, manager
 
 middleware = Middleware(CORSMiddleware,

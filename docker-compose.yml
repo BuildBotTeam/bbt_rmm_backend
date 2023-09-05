@@ -20,7 +20,24 @@ services:
     depends_on:
       - mongo
     restart: unless-stopped
-  
+
+  syslog:
+    build: ./
+    image: syslog
+    command: python syslog_server.py
+    volumes:
+      - .:/usr/src/app/
+    networks:
+      - app-net
+    ports:
+      - 514:514/udp
+    env_file:
+      - ./.env
+    depends_on:
+      - mongo
+      - backend
+    restart: unless-stopped
+
   mongo:
     image: mongo
     networks:
@@ -34,19 +51,19 @@ services:
       - 27017:27017
     restart: unless-stopped
   
-  nginx:
-    build: ./nginx
-    restart: unless-stopped
-    user: root
-    links:
-      - backend
-    networks:
-      - app-net
-    ports:
-      - 80:80
-      - 514:514
-    depends_on:
-      - backend
+#  nginx:
+#    build: ./nginx
+#    restart: unless-stopped
+#    user: root
+#    links:
+#      - backend
+#    networks:
+#      - app-net
+#    ports:
+#      - 80:80
+#      - 514:514
+#    depends_on:
+#      - backend
 
 volumes:
   mongo:

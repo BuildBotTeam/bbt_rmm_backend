@@ -35,7 +35,6 @@ async def get_mikrotik_router(req: Request, uid: str):
 async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     data.user_id = req.user.id
     data = data.create()
-    asyncio.create_task(data.get_logs())
     if data:
         return data.model_dump(exclude='password')
     return Response(status_code=500)
@@ -53,10 +52,10 @@ async def delete_mikrotik_router(req: Request, uid: str):
     return Response(status_code=202 if data else 404)
 
 
-@mikrotik_router_app.get('/{uid}/logs/')
-async def get_mikrotik_router_logs(uid: str):
-    data = MikrotikLogs.filter(router_id=uid)
-    return data
+# @mikrotik_router_app.get('/{uid}/logs/')
+# async def get_mikrotik_router_logs(uid: str):
+#     data = MikrotikLogs.filter(router_id=uid)
+#     return data
 
 
 commands = {
