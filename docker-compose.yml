@@ -33,23 +33,6 @@ services:
       - mongo
     restart: unless-stopped
 
-  syslog:
-    build: ./
-    image: syslog
-    command: python syslog_server.py
-    volumes:
-      - .:/usr/src/app/
-    networks:
-      - app-net
-    ports:
-      - 514:514/udp
-    env_file:
-      - ./.env
-    depends_on:
-      - mongo
-      - backend
-    restart: unless-stopped
-
   mongo:
     image: mongo
     networks:

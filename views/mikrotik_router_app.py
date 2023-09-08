@@ -1,11 +1,6 @@
-import asyncio
-from typing import Union, Annotated
-from fastapi import FastAPI, Request, Response, Query, Depends
-from starlette import status
-from starlette.exceptions import WebSocketException
-from starlette.websockets import WebSocket
-from models.mikrotik import MikrotikRouter, MikrotikLogs
-from views.ws_app import manager
+from typing import Union
+from fastapi import FastAPI, Request, Response
+from models.mikrotik import MikrotikRouter
 
 mikrotik_router_app = FastAPI()
 
@@ -16,35 +11,29 @@ async def get_mikrotik_routers(req: Request, q: Union[dict, None] = None):
         routers = MikrotikRouter.filter(user_id=req.user.id, **q)
     else:
         routers = MikrotikRouter.filter(user_id=req.user.id)
-    # global connection
-    # if not connection:
-    #     connection = MikrotikRouter(host='192.168.252.134', username='admin', password='admin', ).connect()
-    # else:
-    #     api = connection.get_api()
-    #     print(api.get_resource('/log').get())
-    return [r.model_dump(exclude='password') for r in routers]
+    return [r.model_dump(exclude={'password'}) for r in routers]
 
 
 @mikrotik_router_app.get('/{uid}/')
 async def get_mikrotik_router(req: Request, uid: str):
     data = MikrotikRouter.get(uid, user_id=req.user.id)
-    return data.model_dump(exclude='password')
+    return data.model_dump(exclude={'password'})
 
 
 @mikrotik_router_app.post('/')
 async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     data.user_id = req.user.id
     data = data.create()
-    await data.connect_to_syslog()
+    await data.get_oids()
     if data:
-        return data.model_dump(exclude='password')
+        return data.model_dump(exclude={'password'})
     return Response(status_code=500)
 
 
 @mikrotik_router_app.put('/')
 async def update_mikrotik_router(data: MikrotikRouter):
     data = data.save()
-    return data.model_dump(exclude='password')
+    return data.model_dump(exclude={'password'})
 
 
 @mikrotik_router_app.delete('/{uid}/')

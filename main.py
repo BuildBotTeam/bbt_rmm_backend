@@ -8,7 +8,7 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from controllers.router_controller import get_status
+from controllers.router_controller import get_status, get_logs
 from models.auth import Account
 from views.mikrotik_router_app import mikrotik_router_app
 from views.auth_app import auth_app, TokenAuthBackend
@@ -33,7 +33,7 @@ secure_app.mount('/mikrotik_routers', mikrotik_router_app)
 
 @app.on_event('startup')
 async def start_services():
-    # asyncio.create_task(get_logs())
+    asyncio.create_task(get_logs())
     asyncio.create_task(get_status())
     # asyncio.create_task(dp.start_polling(bot))
 
