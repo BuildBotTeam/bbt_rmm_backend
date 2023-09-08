@@ -5,6 +5,7 @@ from typing import Union
 import asyncssh
 from pydantic import ConfigDict, BaseModel
 from controllers.mongo_controller import MongoDBModel
+from models.settings import settings
 
 from views.ws_app import manager
 
@@ -86,7 +87,7 @@ class MikrotikRouter(MongoDBModel):
                                      'result': f'{router.name} - {router.host}:\n{result.stdout}{"-" * 50}\n\n'})
 
     async def connect_to_syslog(self):
-        command = '/system/logging/action add remote=192.168.252.192 name="bbtrmm" remote-port=514 target=remote;'
+        command = f'/system/logging/action add remote={settings.HOST} name="bbtrmm" remote-port=514 target=remote;'
         for topic in self.topics:
             command += f'/system/logging add action="bbtrmm" topics={topic};'
         command += '/log error message="test message on create connection to syslog";'

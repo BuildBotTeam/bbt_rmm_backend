@@ -16,7 +16,9 @@ from views.bot_app import dp
 from views.ws_app import get_token, manager
 
 middleware = Middleware(CORSMiddleware,
-                        allow_origins=["ws://localhost:3000", "http://localhost:3000", "https://localhost:3000"],
+                        # allow_origins=["https://192.168.100.31:443", "ws://localhost:3000", "http://localhost:3000",
+                        #                "https://localhost:3000"],
+                        allow_origins=["*"],
                         allow_credentials=True,
                         allow_methods=["*"],
                         allow_headers=["*"],
