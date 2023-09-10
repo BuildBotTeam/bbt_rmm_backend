@@ -1,6 +1,5 @@
 import asyncio
-import socketserver
-from typing import Annotated, Tuple
+from typing import Annotated
 
 from fastapi import FastAPI, Depends
 from starlette.middleware import Middleware
@@ -12,12 +11,10 @@ from controllers.router_controller import get_status, get_logs
 from models.auth import Account
 from views.mikrotik_router_app import mikrotik_router_app
 from views.auth_app import auth_app, TokenAuthBackend
-from views.bot_app import dp
+from views.bot_app import dp, bot
 from views.ws_app import get_token, manager
 
 middleware = Middleware(CORSMiddleware,
-                        # allow_origins=["https://192.168.100.31:443", "ws://localhost:3000", "http://localhost:3000",
-                        #                "https://localhost:3000"],
                         allow_origins=["*"],
                         allow_credentials=True,
                         allow_methods=["*"],
@@ -35,7 +32,7 @@ secure_app.mount('/mikrotik_routers', mikrotik_router_app)
 async def start_services():
     asyncio.create_task(get_logs())
     asyncio.create_task(get_status())
-    # asyncio.create_task(dp.start_polling(bot))
+    asyncio.create_task(dp.start_polling(bot))
 
 
 @app.on_event("shutdown")

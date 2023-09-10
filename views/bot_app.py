@@ -7,6 +7,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from models.auth import Account
 from models.settings import settings
+import re
+
+regex_email = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 
 ADMIN_TG = set([int(x) for x in settings.ADMIN_TG.split()])
 
@@ -50,12 +53,15 @@ async def result_user(message: Message, state: FSMContext):
     username = await state.get_data()
     username = username.get('username')
     await state.clear()
-    user = Account(email=message.text.lower(), username=username, password=None,
-                   active=True).change_token().create()
-    if user:
-        await message.answer(text=f'User successful created:\n{user.to_bot_message_repr()}', parse_mode='HTML')
+    if re.fullmatch(regex_email, message.text.lower()):
+        user = Account(email=message.text.lower(), username=username, password=None,
+                       active=True).change_token().create()
+        if user:
+            await message.answer(text=f'User successful created:\n{user.to_bot_message_repr()}', parse_mode='HTML')
+        else:
+            await message.answer(text=f'User not created:\n User already exist', parse_mode='HTML')
     else:
-        await message.answer(text=f'User not created:\n User already exist', parse_mode='HTML')
+        await message.answer(text=f'User not created:\n Wrong email!!!', parse_mode='HTML')
 
 
 @dp.message(Command('change_status_user'), F.chat.id.in_(ADMIN_TG))
