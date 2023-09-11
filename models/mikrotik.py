@@ -100,7 +100,8 @@ class MikrotikRouter(MongoDBModel):
 
     async def get_logs(self):
         is_success, result = await self.send_command('log print', use_broadcast=False)
-        self.add_logs(result.replace('\r', '').split('\n'))
+        if is_success:
+            self.add_logs(result.replace('\r', '').split('\n'))
 
     async def get_oids(self):
         is_success, result = await self.send_command('interface print oid', use_broadcast=False)
@@ -137,6 +138,10 @@ class MikrotikRouter(MongoDBModel):
         for router in routers:
             if router.is_online:
                 asyncio.create_task(router.send_command(raw_command))
+            else:
+                await manager.broadcast(router.user_id, 'command_result',
+                                        {'is_success': False,
+                                         'result': f'{router.name} - {router.host}:\nRouter is offline!\n{"-" * 50}\n\n'})
 
     async def send_command(self, raw_command: str, use_broadcast: bool = True):
         try:

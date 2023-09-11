@@ -1,4 +1,6 @@
 from typing import Union
+
+import asyncio
 from fastapi import FastAPI, Request, Response
 from models.mikrotik import MikrotikRouter
 
@@ -25,8 +27,8 @@ async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     data.user_id = req.user.id
     data = data.create()
     if data:
-        await data.get_oids()
-        await data.get_logs()
+        asyncio.create_task(data.get_oids())
+        asyncio.create_task(data.get_logs())
         return data.model_dump(exclude={'password'})
     return Response(status_code=500)
 
@@ -35,9 +37,10 @@ async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
 async def update_mikrotik_router(data: MikrotikRouter):
     data = data.save()
     if data:
-        await data.get_oids()
-        await data.get_logs()
-    return data.model_dump(exclude={'password'})
+        asyncio.create_task(data.get_oids())
+        asyncio.create_task(data.get_logs())
+        return data.model_dump(exclude={'password'})
+    return Response(status_code=500)
 
 
 @mikrotik_router_app.delete('/{uid}/')
