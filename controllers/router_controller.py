@@ -5,6 +5,7 @@ from models.mikrotik import MikrotikRouter, MikrotikSNMPLogs
 from pysnmp.hlapi.asyncio import *
 
 from views.ws_app import manager
+from pysnmp.hlapi import UsmUserData
 
 
 # region SNMP
@@ -12,7 +13,9 @@ from views.ws_app import manager
 async def get_oid_data(router: MikrotikRouter, counter):
     error_indication, error_status, error_index, var_binds = await getCmd(
         SnmpEngine(),
-        CommunityData('public', mpModel=1),
+        UsmUserData('SNMPv3', authKey=router.password*3, privKey=None,
+                    authProtocol=usmHMACSHAAuthProtocol,
+                    privProtocol=usmNoPrivProtocol),
         UdpTransportTarget((router.host, 161)),
         ContextData(),
         *[ObjectType(ObjectIdentity(oid)) for oid in router.oids.keys()],
