@@ -29,6 +29,7 @@ async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     if data:
         asyncio.create_task(data.get_oids())
         asyncio.create_task(data.get_logs())
+        asyncio.create_task(data.create_snmp_connection())
         return data.model_dump(exclude={'password'})
     return Response(status_code=500)
 

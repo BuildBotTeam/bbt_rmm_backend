@@ -111,6 +111,14 @@ class MikrotikRouter(MongoDBModel):
                 self.oids[key] = value
             self.save()
 
+    async def create_snmp_connection(self):
+        command = f'/snmp community add name=SNMPv3 security=private authentication-protocol=SHA1 ' \
+                  f'encryption-protocol=AES authentication-password={self.password * 3} encryption-password={self.password * 3};' \
+                  f'/snmp set enabled=yes trap-community=SNMPv3 trap-version=3'
+        is_success, result = await self.send_command(command, use_broadcast=False)
+        print(is_success, result)
+
+
     @classmethod
     async def ping(cls, ids: list[str], host: str, count: int = 1, **kwargs):
         command = f'/ping {host} count={count}'
