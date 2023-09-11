@@ -24,8 +24,9 @@ async def get_mikrotik_router(req: Request, uid: str):
 async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
     data.user_id = req.user.id
     data = data.create()
-    await data.get_oids()
     if data:
+        await data.get_oids()
+        await data.get_logs()
         return data.model_dump(exclude={'password'})
     return Response(status_code=500)
 
@@ -33,6 +34,9 @@ async def create_mikrotik_routers(req: Request, data: MikrotikRouter):
 @mikrotik_router_app.put('/')
 async def update_mikrotik_router(data: MikrotikRouter):
     data = data.save()
+    if data:
+        await data.get_oids()
+        await data.get_logs()
     return data.model_dump(exclude={'password'})
 
 

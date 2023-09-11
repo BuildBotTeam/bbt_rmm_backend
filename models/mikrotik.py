@@ -80,7 +80,8 @@ class MikrotikRouter(MongoDBModel):
     host: str
     username: str
     password: str
-    topics: list[str] = []
+    # topics: list[str] = []
+    ssh_port: int = 22
     version_os: Union[str, None] = None
     logs: list[MikrotikLogs] = []
     status_log: list[MikrotikSNMPLogs] = []
@@ -138,14 +139,22 @@ class MikrotikRouter(MongoDBModel):
                 asyncio.create_task(router.send_command(raw_command))
 
     async def send_command(self, raw_command: str, use_broadcast: bool = True):
-        async with asyncssh.connect(self.host, username=self.username, password=self.password,
-                                    known_hosts=None) as conn:
-            result = await conn.run(raw_command)
+        try:
+            async with asyncssh.connect(self.host, port=self.ssh_port, username=self.username, password=self.password,
+                                        known_hosts=None) as conn:
+                result = await conn.run(raw_command)
+                if use_broadcast:
+                    await manager.broadcast(self.user_id, 'command_result',
+                                            {'is_success': result.exit_status == 0,
+                                             'result': f'{self.name} - {self.host}:\n{result.stdout}{"-" * 50}\n\n'})
+                return result.exit_status == 0, result.stdout
+        except Exception as e:
             if use_broadcast:
+                message = 'SSH connection error!\nTry change or open port' if self.is_online else 'SSH connection error!'
                 await manager.broadcast(self.user_id, 'command_result',
-                                        {'is_success': result.exit_status == 0,
-                                         'result': f'{self.name} - {self.host}:\n{result.stdout}{"-" * 50}\n\n'})
-            return result.exit_status == 0, result.stdout
+                                        {'is_success': False,
+                                         'result': f'{self.name} - {self.host}:\n{message}\n{"-" * 50}\n\n'})
+            return False, 'Network error'
 
 
 def to_sneak(string: str) -> str:
