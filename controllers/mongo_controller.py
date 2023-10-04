@@ -32,6 +32,7 @@ class MongoDBModel(BaseModel):
         if id:
             data = db[cls.Meta.collection_name].find_one({'_id': BsonObjectId(id), **kwargs})
         else:
+            print(kwargs)
             data = db[cls.Meta.collection_name].find_one(kwargs)
         return cls(**data) if data else None
 

@@ -39,10 +39,7 @@ class Account(MongoDBModel):
         collection_name = 'users'
 
     def change_token(self):
-        new_token = b64encode(token_bytes(32)).decode()
-        if not self.token:
-            self.google_secret = new_token
-        self.token = new_token
+        self.token = b64encode(token_bytes(32)).decode()
         return self
 
     def check_token(self, token: str) -> bool:
@@ -61,7 +58,6 @@ class Account(MongoDBModel):
         return pyotp.totp.TOTP(self.google_secret).provisioning_uri(name='BBT RMM', issuer_name='Secure App')
 
     def check_secret(self, secret: str) -> bool:
-        print(self.google_secret, secret)
         totp = pyotp.TOTP(self.google_secret)
         return totp.verify(secret)
 
