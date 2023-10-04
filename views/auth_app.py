@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Response
 from starlette.authentication import AuthenticationBackend, AuthenticationError, AuthCredentials, SimpleUser
 
-from models.auth import LoginRequest, Account
+from models.auth import LoginRequest, Account, SecretRequest
 
 auth_app = FastAPI()
 
@@ -37,9 +37,9 @@ async def login(auth: LoginRequest):
 
 
 @auth_app.post('/check_secret/')
-async def check_secret(username: str, secret: str):
-    acc = Account.get(username=username)
-    if acc and acc.check_secret(secret):
+async def check_secret(secret: SecretRequest):
+    acc = Account.get(username=secret.username)
+    if acc and acc.check_secret(secret.secret):
         return {'token': acc.token}
     return Response(status_code=401)
 

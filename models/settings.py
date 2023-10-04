@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     HOST: str
     ADMIN_TG: str
     DB_ADMIN_USERNAME: str
-    DB_ADMIN_EMAIL: str
+    DB_ADMIN_SECRETE: str
     DB_ADMIN_PASSWORD: str
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')

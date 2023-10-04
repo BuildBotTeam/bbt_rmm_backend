@@ -19,6 +19,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SecretRequest(BaseModel):
+    username: str
+    secret: str
+
+
 class Token(BaseModel):
     token: str
 
@@ -56,6 +61,7 @@ class Account(MongoDBModel):
         return pyotp.totp.TOTP(self.google_secret).provisioning_uri(name='BBT RMM', issuer_name='Secure App')
 
     def check_secret(self, secret: str) -> bool:
+        print(self.google_secret, secret)
         totp = pyotp.TOTP(self.google_secret)
         return totp.verify(secret)
 

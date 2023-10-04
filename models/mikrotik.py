@@ -113,7 +113,7 @@ class MikrotikRouter(MongoDBModel):
 
     async def create_snmp_connection(self):
         command = f'/snmp community add name=SNMPv3 security=private authentication-protocol=SHA1 ' \
-                  f'encryption-protocol=AES authentication-password={self.password * 3} encryption-password={self.password * 3};' \
+                  f'encryption-protocol=AES authentication-password={self.password} encryption-password={self.password};' \
                   f'/snmp set enabled=yes trap-community=SNMPv3 trap-version=3'
         is_success, result = await self.send_command(command, use_broadcast=False)
         print(is_success, result)
