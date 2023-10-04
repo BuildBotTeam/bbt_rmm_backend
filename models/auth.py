@@ -1,28 +1,14 @@
-# from passlib.context import CryptContext
 import random
 import string
 
-from bson import ObjectId as BsonObjectId
-from pydantic import BaseModel, field_validator, Field
-from typing import Union, Optional
+import pyotp
+from pydantic import BaseModel, field_validator
+from typing import Union
 from secrets import token_bytes
 from base64 import b64encode
-
-from starlette.websockets import WebSocket
-
 from controllers.mongo_controller import db, MongoDBModel
-from models.settings import settings
 
 
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-#
-#
-# def is_hash_password(password):
-#     return pwd_context.identify(password)
-#
-#
-# def get_password_hash(password):
-#     return pwd_context.hash(password)
 def get_random_password():
     random_source = string.ascii_letters + string.digits + '@!#$%&*'
     return ''.join(random.choice(random_source) for i in range(8))
@@ -31,7 +17,6 @@ def get_random_password():
 class LoginRequest(BaseModel):
     username: str
     password: str
-    email: str
 
 
 class Token(BaseModel):
@@ -39,17 +24,20 @@ class Token(BaseModel):
 
 
 class Account(MongoDBModel):
-    email: str
     username: str
     password: Union[str, None] = None
     token: Union[str, None] = None
+    google_secret: Union[str, None] = None
     active: bool
 
     class Meta:
         collection_name = 'users'
 
     def change_token(self):
-        self.token = b64encode(token_bytes(32)).decode()
+        new_token = b64encode(token_bytes(32)).decode()
+        if not self.token:
+            self.google_secret = new_token
+        self.token = new_token
         return self
 
     def check_token(self, token: str) -> bool:
@@ -61,23 +49,15 @@ class Account(MongoDBModel):
             return pw
         return get_random_password()
 
-    def check_access(self, password: str, email: str) -> bool:
-        return self.password == password and self.email == email
+    def check_access(self, password: str) -> bool:
+        return self.password == password
 
-    # @field_validator('hash_password')
-    # def hash_password(cls, pw: str) -> str:
-    #     if is_hash_password(pw):
-    #         return pw
-    #     return pwd_context.hash(pw)
+    def qr_code_url_gen(self):
+        return pyotp.totp.TOTP(self.google_secret).provisioning_uri(name='BBT RMM', issuer_name='Secure App')
 
-    # def check_password(self, password: str) -> bool:
-    #     return pwd_context.verify(password, self.hash_password)
-    # @model_validator(mode='before')
-    # def _set_person_id(cls, data):
-    #     document_id = data.get("_id")
-    #     if document_id:
-    #         data["person_id"] = document_id
-    #     return data
+    def check_secret(self, secret: str) -> bool:
+        totp = pyotp.TOTP(self.google_secret)
+        return totp.verify(secret)
 
     @classmethod
     def filter(cls):

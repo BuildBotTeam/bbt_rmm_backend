@@ -31,17 +31,26 @@ async def check_token(request: Request):
 @auth_app.post('/login/')
 async def login(auth: LoginRequest):
     acc = Account.get(username=auth.username)
-    if acc and acc.check_access(auth.password, auth.email) and acc.active:
-        return {'token': acc.token, 'username': acc.username}
+    if acc and acc.check_access(auth.password) and acc.active:
+        return {'username': acc.username, 'qr_code_url': acc.qr_code_url_gen()}
     return Response(status_code=401)
 
-# @auth_app.post('/logout/')
-# async def logout(request: Request):
-#     authorization = request.headers.get('Authorization')
-#     if not authorization:
-#         return Response(status_code=401)
-#     token = authorization.split(' ')[1]
-#     user = Account.get(token=token)
-#     user.token = None
-#     user.save()
-#     return Response(status_code=401)
+
+@auth_app.post('/check_secret/')
+async def check_secret(username: str, secret: str):
+    acc = Account.get(username=username)
+    if acc and acc.check_secret(secret):
+        return {'token': acc.token}
+    return Response(status_code=401)
+
+
+@auth_app.post('/logout/')
+async def logout(request: Request):
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        return Response(status_code=401)
+    token = authorization.split(' ')[1]
+    user = Account.get(token=token)
+    user.change_token()
+    user.save()
+    return Response(status_code=200)
