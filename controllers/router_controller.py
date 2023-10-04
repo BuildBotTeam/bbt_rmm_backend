@@ -13,9 +13,9 @@ from pysnmp.hlapi import UsmUserData
 async def get_oid_data(router: MikrotikRouter, counter):
     error_indication, error_status, error_index, var_binds = await getCmd(
         SnmpEngine(),
-        UsmUserData('SNMPv3', authKey=router.password*3, privKey=None,
+        UsmUserData('SNMPv3', authKey=router.password, privKey=router.password,
                     authProtocol=usmHMACSHAAuthProtocol,
-                    privProtocol=usmNoPrivProtocol),
+                    privProtocol=usmAesCfb128Protocol),
         UdpTransportTarget((router.host, 161)),
         ContextData(),
         *[ObjectType(ObjectIdentity(oid)) for oid in router.oids.keys()],
