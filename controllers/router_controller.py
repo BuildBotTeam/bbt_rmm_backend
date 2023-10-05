@@ -22,9 +22,10 @@ async def get_oid_data(router: MikrotikRouter, counter):
         lookupMib=False,
         lexicographicMode=False
     )
-    print(error_indication, error_status, error_index, var_binds)
+
     result = {'time': datetime.now().astimezone().isoformat()}
     if error_indication:
+        print(error_indication)
         if router.is_online:
             router.is_online = False
             result['online'] = False
