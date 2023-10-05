@@ -6,7 +6,6 @@ class Settings(BaseSettings):
     MONGO_INITDB_ROOT_PASSWORD: str
     MONGO_INITDB_DATABASE: str
     BOT_TOKEN: str
-    HOST: str
     ADMIN_TG: str
     DB_ADMIN_USERNAME: str
     DB_ADMIN_SECRETE: str
