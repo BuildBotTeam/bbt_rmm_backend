@@ -1,3 +1,4 @@
+import base64
 import random
 import string
 
@@ -34,9 +35,15 @@ class Account(MongoDBModel):
     token: Union[str, None] = None
     google_secret: Union[str, None] = None
     active: bool
+    admin: bool = False
 
     class Meta:
         collection_name = 'users'
+
+    def create_secret(self):
+        secret = self.username + '456' + self.password
+        self.google_secret = base64.b32encode(secret.encode("UTF-8")).decode('utf-8')
+        return self
 
     def change_token(self):
         self.token = b64encode(token_bytes(32)).decode()
@@ -58,6 +65,8 @@ class Account(MongoDBModel):
         return pyotp.totp.TOTP(self.google_secret).provisioning_uri(name='BBT RMM', issuer_name='Secure App')
 
     def check_secret(self, secret: str) -> bool:
+        if not self.google_secret:
+            return False
         totp = pyotp.TOTP(self.google_secret)
         return totp.verify(secret)
 
@@ -67,6 +76,6 @@ class Account(MongoDBModel):
         return [cls(**user) for user in users]
 
     def to_bot_message_repr(self):
-        return f'email: <code>{self.email}</code>\n' \
-               f'username: <code>{self.username}</code>\n' \
-               f'password: <code>{self.password}</code>'
+        return f'username: <code>{self.username}</code>\n' \
+               f'password: <code>{self.password}</code>\n' \
+               f'secret: <code>{self.google_secret}</code>'

@@ -43,25 +43,14 @@ async def create_user(message: Message, state: FSMContext) -> None:
 
 @dp.message(UserState.type_username)
 async def type_email(message: Message, state: FSMContext):
-    await state.update_data(username=message.text.lower())
-    await message.answer('Type email')
-    await state.set_state(UserState.type_email)
-
-
-@dp.message(UserState.type_email)
-async def result_user(message: Message, state: FSMContext):
-    username = await state.get_data()
-    username = username.get('username')
+    username = message.text.lower()
     await state.clear()
-    if re.fullmatch(regex_email, message.text.lower()):
-        user = Account(email=message.text.lower(), username=username, password=None,
-                       active=True).change_token().create()
+    if username and len(username) > 2:
+        user = Account(username=username, password=None, active=True).change_token().create_secret().create()
         if user:
             await message.answer(text=f'User successful created:\n{user.to_bot_message_repr()}', parse_mode='HTML')
         else:
             await message.answer(text=f'User not created:\n User already exist', parse_mode='HTML')
-    else:
-        await message.answer(text=f'User not created:\n Wrong email!!!', parse_mode='HTML')
 
 
 @dp.message(Command('change_status_user'), F.chat.id.in_(ADMIN_TG))
@@ -95,7 +84,6 @@ async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(UserState.status_user, F.data)
 async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    print(callback.data)
     user = Account.get(id=callback.data)
     user.active = not user.active
     user.save()
@@ -109,6 +97,7 @@ async def result_change_status_user(callback: CallbackQuery, state: FSMContext):
 async def change_status_user(message: Message, state: FSMContext) -> None:
     builder = InlineKeyboardBuilder()
     users = Account.filter()
+    print(users)
     for user in users:
         builder.row(InlineKeyboardButton(
             text=f'{user.username} {"is_active" if user.active else "is_not_active"}',
