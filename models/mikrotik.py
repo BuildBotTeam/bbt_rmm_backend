@@ -94,7 +94,9 @@ class MikrotikRouter(MongoDBModel):
 
     def add_logs(self, logs: list):
         if logs and isinstance(logs, list):
-            last_log = self.logs[0] if self.logs else None
+            last_log = None
+            if self.logs:
+                last_log = self.logs[0]
             self.logs += MikrotikLogs.add_newest_logs(last_log, logs)
             self.save()
 
@@ -117,7 +119,6 @@ class MikrotikRouter(MongoDBModel):
                   f'/snmp set enabled=yes trap-community=SNMPv3 trap-version=3'
         is_success, result = await self.send_command(command, use_broadcast=False)
         print(is_success, result)
-
 
     @classmethod
     async def ping(cls, ids: list[str], host: str, count: int = 1, **kwargs):

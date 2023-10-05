@@ -16,13 +16,13 @@ async def get_oid_data(router: MikrotikRouter, counter):
         UsmUserData('SNMPv3', authKey=router.password, privKey=router.password,
                     authProtocol=usmHMACSHAAuthProtocol,
                     privProtocol=usmAesCfb128Protocol),
-        UdpTransportTarget((router.host, 161)),
+        UdpTransportTarget((router.host, 161), timeout=2.0),
         ContextData(),
         *[ObjectType(ObjectIdentity(oid)) for oid in router.oids.keys()],
         lookupMib=False,
         lexicographicMode=False
     )
-
+    print(error_indication, error_status, error_index, var_binds)
     result = {'time': datetime.now().astimezone().isoformat()}
     if error_indication:
         if router.is_online:
